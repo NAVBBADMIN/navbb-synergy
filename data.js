@@ -1,149 +1,198 @@
 /* ============================================================
-   NAVBB SYNERGY — APP
-   Renders the roster (grouped by org tier), handles multi-select,
-   draws each person's trait "fingerprint" glyph, and renders the
-   dynamic synergy readout from engine.js.
+   NAVBB SYNERGY — ROSTER DATA
+   ============================================================
+   Edit this file to add/remove people or fix a title/type.
+   Everything else (cards, synergy logic, fingerprints) reads
+   from this array — you never have to touch index.html or
+   engine.js to update the roster.
+
+   AXES — each trait pair is stored as ONE signed number from
+   -100 to +100. Positive = the first letter's pole, negative =
+   the second letter's pole. This lets the synergy engine do
+   real math (averages, spreads, deltas) instead of comparing
+   text strings.
+
+     ei :  Extraverted (+)   vs  Introverted (-)
+     ns :  Intuitive   (+)   vs  Observant   (-)   [N vs S]
+     tf :  Thinking    (+)   vs  Feeling     (-)
+     jp :  Judging     (+)   vs  Prospecting (-)
+     at :  Assertive   (+)   vs  Turbulent   (-)
+
+   TIER — inferred from the org chart / job title, since the
+   chart intentionally left formal reporting lines vague.
+   1 = Executive, 2 = Senior Management, 3 = Management/Specialist,
+   4 = Staff. Adjust the `tier` number on any person if this
+   guess is wrong — the engine only uses it to flag when a
+   selected group spans multiple levels.
    ============================================================ */
 
-const state = { selected: new Set() };
-
-// ---------- trait fingerprint glyph (signature visual element) ----------
-// A 5-axis radar polygon built from the person's actual signed
-// trait values — every glyph is genuinely unique to that person's
-// data, not a decorative icon.
-function fingerprintSVG(person, size = 44) {
-  const keys = ["ei", "ns", "tf", "jp", "at"];
-  const cx = size / 2, cy = size / 2, r = size / 2 - 4;
-  const pts = keys.map((k, i) => {
-    const angle = (Math.PI * 2 * i) / keys.length - Math.PI / 2;
-    const mag = (Math.abs(person.axes[k]) / 100) * r;
-    const x = cx + Math.cos(angle) * mag;
-    const y = cy + Math.sin(angle) * mag;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
-  const color = person.roleGroup === "Analyst" ? "#3d5a8f"
-              : person.roleGroup === "Diplomat" ? "#a8462d"
-              : person.roleGroup === "Sentinel" ? "#3f7a5c"
-              : "#c9a227";
-  return `<svg class="fingerprint" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true">
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(22,35,61,0.12)" stroke-width="1"/>
-    <polygon points="${pts}" fill="${color}" fill-opacity="0.28" stroke="${color}" stroke-width="1.5"/>
-  </svg>`;
-}
-
-// ---------- roster rendering, grouped by tier ----------
-function renderRoster() {
-  const root = document.getElementById("roster");
-  root.innerHTML = "";
-  [1, 2, 3, 4].forEach(tier => {
-    const people = ROSTER.filter(p => p.tier === tier);
-    if (!people.length) return;
-    const block = document.createElement("div");
-    block.className = "tier-block";
-    block.innerHTML = `<p class="tier-label">${TIER_LABEL[tier]}</p>`;
-    const grid = document.createElement("div");
-    grid.className = "roster-grid";
-    people.forEach(p => grid.appendChild(renderCard(p)));
-    block.appendChild(grid);
-    root.appendChild(block);
-  });
-}
-
-function renderCard(person) {
-  const card = document.createElement("button");
-  card.type = "button";
-  card.className = "card" + (state.selected.has(person.name) ? " selected" : "");
-  card.setAttribute("aria-pressed", state.selected.has(person.name));
-  card.innerHTML = `
-    <div class="card-top">
-      <div>
-        <div class="card-name">${person.displayName}</div>
-        <div class="card-title">${person.title} &middot; ${person.location}</div>
-      </div>
-      ${fingerprintSVG(person)}
-    </div>
-    <div class="card-type">${person.type} &middot; ${person.nickname}</div>
-  `;
-  card.addEventListener("click", () => toggleSelect(person.name));
-  return card;
-}
-
-function toggleSelect(name) {
-  if (state.selected.has(name)) state.selected.delete(name);
-  else state.selected.add(name);
-  renderRoster();
-  renderSynergy();
-}
-
-// ---------- synergy panel ----------
-function renderSynergy() {
-  const wrap = document.getElementById("synergy-body");
-  const chipsRow = document.getElementById("selected-chips");
-  chipsRow.innerHTML = "";
-
-  [...state.selected].forEach(name => {
-    const p = ROSTER.find(x => x.name === name);
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.innerHTML = `${p.displayName} <button aria-label="Remove ${p.displayName}">&times;</button>`;
-    chip.querySelector("button").addEventListener("click", () => toggleSelect(name));
-    chipsRow.appendChild(chip);
-  });
-
-  if (state.selected.size < 2) {
-    wrap.innerHTML = `
-      <div class="synergy-empty">
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#5b6b8c" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="16" r="3"/><path d="M10.5 10.5l3 3"/></svg>
-        <p>${state.selected.size === 0 ? "Select two or more team members to generate a synergy readout." : "Select at least one more person to see how they work together."}</p>
-      </div>`;
-    return;
+const ROSTER = [
+  {
+    name: "Michael Donovan", displayName: "Michael Donovan",
+    location: "CORP", title: "President", tier: 1,
+    type: "ENTP-A", nickname: "Debater", roleGroup: "Analyst", strategy: "People Mastery",
+    axes: { ei: 71, ns: 82, tf: 56, jp: -54, at: 86 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Melanie Galanis", displayName: "Dr. Galanis",
+    location: "CORP", title: "Medical Director", tier: 1,
+    type: "ENTJ-A", nickname: "Commander", roleGroup: "Analyst", strategy: "People Mastery",
+    axes: { ei: 56, ns: 64, tf: 60, jp: 68, at: 69 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Casey Majewski", displayName: "Casey Majewski",
+    location: "CORP", title: "Special Projects Manager", tier: 1,
+    type: "ENTJ-A", nickname: "Commander", roleGroup: "Analyst", strategy: "People Mastery",
+    axes: { ei: 52, ns: 66, tf: 68, jp: 76, at: 64 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Jacob Brennan", displayName: "Jacob Brennan",
+    location: "CORP", title: "Operations Manager", tier: 2,
+    type: "ISFJ-T", nickname: "Defender", roleGroup: "Sentinel", strategy: "Constant Improvement",
+    axes: { ei: -73, ns: -69, tf: -53, jp: 89, at: -60 },
+    startDate: "2026-05-18", birthday: null
+  },
+  {
+    name: "Derek Brottlund", displayName: "Derek Brottlund",
+    location: "CORP", title: "IT Developer", tier: 3,
+    type: "INTP-T", nickname: "Logician", roleGroup: "Analyst", strategy: "Constant Improvement",
+    axes: { ei: -82, ns: 95, tf: 77, jp: -81, at: -61 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Alex Williams", displayName: "Alex Williams",
+    location: "CORP", title: "Accountant", tier: 3,
+    type: "ENTJ-A", nickname: "Commander", roleGroup: "Analyst", strategy: "People Mastery",
+    axes: { ei: 67, ns: 53, tf: 82, jp: 56, at: 82 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Clint Ferenal", displayName: "Clint Ferenal",
+    location: "CORP", title: "Executive Assistant", tier: 3,
+    type: "INFJ-A", nickname: "Advocate", roleGroup: "Diplomat", strategy: "Confident Individualism",
+    axes: { ei: -53, ns: 75, tf: -51, jp: 76, at: 71 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Kim Roberts", displayName: "Kim Roberts",
+    location: "DMV", title: "Team Lead", tier: 3,
+    type: "ENTJ-A", nickname: "Commander", roleGroup: "Analyst", strategy: "People Mastery",
+    axes: { ei: 63, ns: 57, tf: 54, jp: 76, at: 79 },
+    startDate: null, birthday: "06-28"
+  },
+  {
+    name: "Caitlyn Parody", displayName: "Caitlyn Parody",
+    location: "DMV", title: "Phlebotomist", tier: 4,
+    type: "INTP-T", nickname: "Logician", roleGroup: "Analyst", strategy: "Constant Improvement",
+    axes: { ei: -83, ns: 85, tf: 78, jp: -51, at: -81 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Brenda Landaeta", displayName: "Brenda Landaeta",
+    location: "DMV", title: "Phlebotomist", tier: 4,
+    type: "ENTJ-A", nickname: "Commander", roleGroup: "Analyst", strategy: "People Mastery",
+    axes: { ei: 63, ns: 73, tf: 53, jp: 74, at: 56 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Hector Vasquez Romero", displayName: "Hector Vasquez Romero",
+    location: "DMV", title: "Canine Handler", tier: 4,
+    type: "INFP-A", nickname: "Mediator", roleGroup: "Diplomat", strategy: "People Mastery",
+    axes: { ei: -55, ns: 89, tf: -64, jp: -89, at: 75 },
+    startDate: "2025-06-23", birthday: null
+  },
+  {
+    name: "Ben Blake", displayName: "Dr. Blake",
+    location: "PIT", title: "Veterinarian", tier: 3,
+    type: "ESTJ-A", nickname: "Executive", roleGroup: "Sentinel", strategy: "People Mastery",
+    axes: { ei: 53, ns: -69, tf: 78, jp: 94, at: 71 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Hannah Murray", displayName: "Hannah Murray",
+    location: "PIT", title: "Recruiter", tier: 3,
+    type: "ENFJ-T", nickname: "Protagonist", roleGroup: "Diplomat", strategy: "Social Engagement",
+    axes: { ei: 81, ns: 78, tf: -66, jp: 71, at: -69 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Wynter Weaver", displayName: "Wynter (Wyn) Weaver",
+    location: "PIT", title: "Team Lead", tier: 3,
+    type: "ENTJ-A", nickname: "Commander", roleGroup: "Analyst", strategy: "Social Engagement",
+    axes: { ei: 71, ns: 92, tf: 73, jp: 82, at: 57 },
+    startDate: null, birthday: "06-12"
+  },
+  {
+    name: "Kaitlyn Anderson", displayName: "Kaitlyn Anderson",
+    location: "PIT", title: "Phlebotomist", tier: 4,
+    type: "INFJ-A", nickname: "Advocate", roleGroup: "Diplomat", strategy: "Confident Individualism",
+    axes: { ei: -53, ns: 56, tf: -53, jp: 78, at: 68 },
+    startDate: null, birthday: "06-21"
+  },
+  {
+    name: "Emilee McGee", displayName: "Emilee McGee",
+    location: "PIT", title: "Phlebotomist", tier: 4,
+    type: "INFJ-T", nickname: "Advocate", roleGroup: "Diplomat", strategy: "Constant Improvement",
+    axes: { ei: -68, ns: 59, tf: -54, jp: 85, at: -79 },
+    startDate: null, birthday: "06-24"
+  },
+  {
+    name: "Jeffrey Tomko", displayName: "Jeffrey Tomko",
+    location: "PIT", title: "Canine Handler", tier: 4,
+    type: "ENFJ-T", nickname: "Protagonist", roleGroup: "Diplomat", strategy: "Social Engagement",
+    axes: { ei: 56, ns: 56, tf: -61, jp: 58, at: -58 },
+    startDate: null, birthday: null
+  },
+  {
+    name: "Donna Strum", displayName: "Donna Strum",
+    location: "RVA", title: "Recruiter", tier: 3,
+    type: "ENFJ-A", nickname: "Protagonist", roleGroup: "Diplomat", strategy: "People Mastery",
+    axes: { ei: 54, ns: 56, tf: -55, jp: 71, at: 68 },
+    startDate: "2026-06-15", birthday: "06-24"
+  },
+  {
+    name: "Kayla Blasko", displayName: "Kayla Blasko",
+    location: "RVA", title: "Team Lead", tier: 3,
+    type: "INFP-T", nickname: "Mediator", roleGroup: "Diplomat", strategy: "Constant Improvement",
+    axes: { ei: -62, ns: 71, tf: -65, jp: -60, at: -72 },
+    startDate: "2026-04-06", birthday: null
+  },
+  {
+    name: "Leah Fralin", displayName: "Leah Fralin",
+    location: "RVA", title: "Phlebotomist", tier: 4,
+    type: "ISFJ-T", nickname: "Defender", roleGroup: "Sentinel", strategy: "Constant Improvement",
+    axes: { ei: -54, ns: -55, tf: -55, jp: 79, at: -57 },
+    startDate: "2026-04-06", birthday: null
+  },
+  {
+    name: "McKenna Adams", displayName: "McKenna Adams",
+    location: "RVA", title: "Phlebotomist", tier: 4,
+    type: "ESTJ-A", nickname: "Executive", roleGroup: "Sentinel", strategy: "People Mastery",
+    axes: { ei: 56, ns: -55, tf: 66, jp: 83, at: 51 },
+    startDate: "2026-07-28", birthday: null
   }
+];
 
-  const result = generateSynergy([...state.selected]);
-  const toneClass = t => `insight tone-${t.tone.replace(/\s+/g, "-")}`;
+/* Axis metadata used by the synergy engine and the fingerprint glyph */
+const AXES = {
+  ei: { pos: "Extraverted", neg: "Introverted", label: "Communication Energy",
+        posShort: "E", negShort: "I" },
+  ns: { pos: "Intuitive", neg: "Observant", label: "Information Processing",
+        posShort: "N", negShort: "S" },
+  tf: { pos: "Thinking", neg: "Feeling", label: "Decision Lens",
+        posShort: "T", negShort: "F" },
+  jp: { pos: "Judging", neg: "Prospecting", label: "Planning & Pace",
+        posShort: "J", negShort: "P" },
+  at: { pos: "Assertive", neg: "Turbulent", label: "Stress Response",
+        posShort: "A", negShort: "T" }
+};
 
-  wrap.innerHTML = `
-    <div class="insight-list">
-      ${result.insights.map(i => `
-        <div class="${toneClass(i)}">
-          <p class="insight-theme">${i.theme}</p>
-          <p class="insight-text">${i.text}</p>
-        </div>
-      `).join("")}
-    </div>
-    <details class="note-drawer">
-      <summary>+ Add a working-style note (saved to this browser only)</summary>
-      <div class="note-field">
-        <select id="note-person">
-          ${[...state.selected].map(n => {
-            const p = ROSTER.find(x => x.name === n);
-            return `<option value="${n}">${p.displayName}</option>`;
-          }).join("")}
-        </select>
-        <textarea id="note-text" rows="3" placeholder="e.g. Prefers written updates over stand-ups; works best with a clear deadline stated up front."></textarea>
-        <button id="note-save">Save note</button>
-        <span class="note-saved-flag" id="note-saved-flag">Saved.</span>
-      </div>
-    </details>
-  `;
-
-  const personSelect = document.getElementById("note-person");
-  const textArea = document.getElementById("note-text");
-  const loadNoteFor = (name) => { textArea.value = getNote(name); };
-  loadNoteFor(personSelect.value);
-  personSelect.addEventListener("change", () => loadNoteFor(personSelect.value));
-
-  document.getElementById("note-save").addEventListener("click", () => {
-    setNote(personSelect.value, textArea.value);
-    const flag = document.getElementById("note-saved-flag");
-    flag.style.display = "inline";
-    setTimeout(() => { flag.style.display = "none"; }, 2000);
-    renderSynergy();
-  });
-}
-
-// ---------- init ----------
-document.addEventListener("DOMContentLoaded", () => {
-  renderRoster();
-  renderSynergy();
-});
+const TIER_LABEL = {
+  1: "Executive",
+  2: "Senior Management",
+  3: "Management / Specialist",
+  4: "Staff"
+};
