@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NAVBB Synergy — Team Dynamics</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <img class="hero-dog" src="assets/hero-dog.jpg" alt="">
+    <div>
+      <p class="eyebrow">NAVBB &middot; Team Synergy Tool</p>
+      <h1>Unlocking Our Collaborative Potential</h1>
+      <p class="sub">Select any combination of team members below to see a synergy readout built from their actual personality data — communication style, decision-making, planning pace, and stress response — not a generic pairing script.</p>
+      <hr class="hero-rule">
+    </div>
+  </div>
+</header>
+
+<main class="shell">
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Synergy Analysis</h2>
+      <p>Updates automatically as you add or remove people below.</p>
+    </div>
+    <div id="selected-chips" class="selected-chip-row"></div>
+    <div id="synergy-body"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Select Team Members</h2>
+      <p>Grouped by organizational level. Click a card to add or remove them from the analysis.</p>
+    </div>
+    <div id="roster"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Add Working-Style Feedback</h2>
+      <p>For corporate staff to share what they know about a colleague's working style.</p>
+    </div>
+    <p class="feedback-copy">Notes submitted here go to the team lead maintaining this page and are merged into the roster periodically — they don't appear on this page automatically. If the form below doesn't load (some organizations block embedded forms), use the direct link.</p>
+    <div class="feedback-embed">
+      <iframe src="https://forms.microsoft.com/Pages/ResponsePage.aspx?id=ZtRBmJX3ZkqiWD-xByrlTkzkXSDwtVFDt2hkRPh5fOFUOVJMMVRFVVRNS05YVFRKUDZTVzBLMzVGTy4u" title="NAVBB Synergy — Team Working Style Feedback form" allowfullscreen webkitallowfullscreen mozallowfullscreen msallowfullscreen></iframe>
+    </div>
+    <p class="feedback-fallback">Form not loading? <a href="https://forms.microsoft.com/Pages/ResponsePage.aspx?id=ZtRBmJX3ZkqiWD-xByrlTkzkXSDwtVFDt2hkRPh5fOFUOVJMMVRFVVRNS05YVFRKUDZTVzBLMzVGTy4u" target="_blank" rel="noopener">Open the feedback form in a new tab &rarr;</a></p>
+  </section>
+
+</main>
+
+<footer>NAVBB Synergy — internal team tool. Personality data sourced from 16Personalities.com assessments.</footer>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
